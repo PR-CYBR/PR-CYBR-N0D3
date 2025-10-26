@@ -1,0 +1,111 @@
+# Traefik Static Configuration for PR-CYBR-N0D3
+# This file defines the main Traefik configuration
+
+# Global configuration
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+# Entry points define the ports Traefik listens on
+entryPoints:
+  # HTTP entry point
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  # HTTPS entry point
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "pr-cybr.local"
+            sans:
+              - "*.pr-cybr.local"
+
+  # Metrics entry point
+  metrics:
+    address: ":8082"
+
+# Certificate resolvers for automatic HTTPS
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "admin@pr-cybr.com"
+      storage: "/etc/traefik/acme/acme.json"
+      # Use HTTP challenge for certificate validation
+      httpChallenge:
+        entryPoint: web
+      # Alternative: Use DNS challenge for wildcard certificates
+      # dnsChallenge:
+      #   provider: cloudflare
+      #   delayBeforeCheck: 0
+
+# Providers define where Traefik gets its configuration
+providers:
+  # Docker provider for automatic service discovery
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: "traefik-public"
+    swarmMode: true
+    watch: true
+
+  # File provider for static configuration
+  file:
+    filename: "/etc/traefik/dynamic.yml"
+    watch: true
+
+# API and dashboard configuration
+api:
+  dashboard: true
+  insecure: false
+  debug: false
+
+# Logging configuration
+log:
+  level: "INFO"
+  format: "json"
+  filePath: "/var/log/traefik/traefik.log"
+
+# Access logs
+accessLog:
+  format: "json"
+  filePath: "/var/log/traefik/access.log"
+  bufferingSize: 100
+  filters:
+    statusCodes:
+      - "400-599"
+  fields:
+    defaultMode: "keep"
+    headers:
+      defaultMode: "keep"
+
+# Metrics configuration
+metrics:
+  prometheus:
+    entryPoint: "metrics"
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Tracing configuration (optional)
+# tracing:
+#   serviceName: "traefik"
+#   jaeger:
+#     samplingServerURL: "http://jaeger:5778/sampling"
+#     localAgentHostPort: "jaeger:6831"
+
+# Ping health check endpoint
+ping:
+  entryPoint: "web"
