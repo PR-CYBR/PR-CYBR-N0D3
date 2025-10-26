@@ -1,0 +1,127 @@
+# Traefik Dynamic Configuration for PR-CYBR-N0D3
+# This file defines routers, services, and middlewares
+
+http:
+  # Routers
+  routers:
+    # Traefik dashboard router
+    traefik-dashboard:
+      rule: "Host(`traefik.pr-cybr.local`)"
+      service: "api@internal"
+      middlewares:
+        - "auth"
+        - "security-headers"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "letsencrypt"
+
+    # Health check router
+    healthcheck:
+      rule: "Path(`/health`)"
+      service: "ping@internal"
+      entryPoints:
+        - "web"
+        - "websecure"
+
+  # Middlewares
+  middlewares:
+    # Basic authentication for dashboard
+    auth:
+      basicAuth:
+        users:
+          # Default: admin:admin (change this!)
+          # Generate with: htpasswd -nb admin password
+          - "admin:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+
+    # Rate limiting
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: "1s"
+
+    # Security headers
+    security-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        sslRedirect: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+        customResponseHeaders:
+          X-Robots-Tag: "none,noarchive,nosnippet,notranslate,noimageindex"
+          Server: ""
+
+    # IP whitelist (example)
+    ip-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          - "10.147.0.0/16"  # ZeroTier network
+
+    # Compression
+    compression:
+      compress: true
+
+    # Redirect HTTP to HTTPS
+    redirect-https:
+      redirectScheme:
+        scheme: "https"
+        permanent: true
+
+  # Services (examples)
+  services:
+    # Example service definition
+    # Real services should be auto-discovered from Docker labels
+    example-service:
+      loadBalancer:
+        servers:
+          - url: "http://example:8080"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+
+# TCP routers and services (for non-HTTP traffic)
+tcp:
+  routers:
+    # Example TCP router
+    ssh-router:
+      rule: "HostSNI(`*`)"
+      service: "ssh-service"
+      entryPoints:
+        - "ssh"
+
+  services:
+    ssh-service:
+      loadBalancer:
+        servers:
+          - address: "ssh-server:22"
+
+# TLS configuration
+tls:
+  options:
+    default:
+      minVersion: "VersionTLS12"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+      sniStrict: true
+
+  certificates:
+    # Custom certificates can be defined here
+    # - certFile: "/path/to/cert.crt"
+    #   keyFile: "/path/to/cert.key"
+    #   stores:
+    #     - default

@@ -1,0 +1,208 @@
+# PR-CYBR-N0D3 Codex Entry
+# Coordination and automation registry for PR-CYBR architecture
+
+metadata:
+  name: "PR-CYBR-N0D3"
+  type: "client-node"
+  version: "1.0.0"
+  description: "Dynamic client node for PR-CYBR distributed architecture"
+  repository: "https://github.com/PR-CYBR/PR-CYBR-N0D3"
+  documentation: "https://pr-cybr.github.io/PR-CYBR-N0D3"
+
+# Management node reference
+management:
+  node: "PR-CYBR-MGMT-N0D3"
+  repository: "https://github.com/PR-CYBR/PR-CYBR-MGMT-N0D3"
+  api_endpoint: "https://mgmt.pr-cybr.local/api"
+  websocket_endpoint: "wss://mgmt.pr-cybr.local/ws"
+
+# Node capabilities
+capabilities:
+  swarm:
+    enabled: true
+    role: "worker"  # or "manager"
+    orchestration: "docker-swarm"
+  
+  networking:
+    overlays:
+      - type: "zerotier"
+        enabled: true
+      - type: "tailscale"
+        enabled: true
+    reverse_proxy:
+      type: "traefik"
+      version: "2.x"
+  
+  telemetry:
+    enabled: true
+    interval: 60  # seconds
+    metrics:
+      - "cpu"
+      - "memory"
+      - "disk"
+      - "network"
+      - "docker"
+  
+  architectures:
+    - "amd64"
+    - "arm64"
+    - "armv7"
+
+# Resource profile (defaults, can be overridden per deployment)
+resources:
+  minimum:
+    cpu: "1"
+    memory: "512Mi"
+    disk: "10Gi"
+  
+  recommended:
+    cpu: "2"
+    memory: "2Gi"
+    disk: "50Gi"
+
+# Service endpoints
+endpoints:
+  health: "/health"
+  ready: "/ready"
+  metrics: "/metrics"
+  api: "/api/v1"
+
+# Integration points
+integrations:
+  terraform_cloud:
+    enabled: true
+    workspace: "pr-cybr-n0d3"
+    organization: "PR-CYBR"
+  
+  github_actions:
+    enabled: true
+    workflows:
+      - "lint"
+      - "test"
+      - "build"
+      - "build-multiarch"
+      - "tfc-sync"
+  
+  monitoring:
+    prometheus:
+      enabled: true
+      port: 9090
+    grafana:
+      enabled: true
+      port: 3000
+
+# Deployment configuration
+deployment:
+  method: "automated"
+  
+  prerequisites:
+    - "Docker 20.10+"
+    - "Network connectivity"
+    - "Swarm join token"
+  
+  installation:
+    script: "./scripts/install.sh"
+    duration: "5-10 minutes"
+  
+  verification:
+    - command: "docker info | grep Swarm"
+      expected: "Swarm: active"
+    - command: "systemctl status pr-cybr-telemetry"
+      expected: "active (running)"
+
+# Security configuration
+security:
+  secrets:
+    required:
+      - "SWARM_JOIN_TOKEN"
+      - "ZEROTIER_NETWORK_ID"
+      - "TAILSCALE_AUTH_KEY"
+      - "API_TOKEN"
+    
+    optional:
+      - "ZEROTIER_API_TOKEN"
+      - "TFC_TOKEN"
+      - "REGISTRY_USERNAME"
+      - "REGISTRY_PASSWORD"
+  
+  network_policies:
+    - "Allow inbound: 2377/tcp, 7946/tcp, 7946/udp, 4789/udp (Docker Swarm)"
+    - "Allow inbound: 9993/udp (ZeroTier)"
+    - "Allow inbound: 41641/udp (Tailscale)"
+    - "Allow inbound: 80/tcp, 443/tcp (Traefik)"
+  
+  encryption:
+    at_rest: true
+    in_transit: true
+
+# Automation hooks
+automation:
+  on_startup:
+    - "Join Docker Swarm"
+    - "Connect to overlay networks"
+    - "Register with management node"
+    - "Start telemetry"
+  
+  on_update:
+    - "Pull latest configuration"
+    - "Restart affected services"
+    - "Report status"
+  
+  on_shutdown:
+    - "Drain node tasks"
+    - "Report shutdown"
+    - "Leave swarm gracefully"
+
+# SOPs and documentation
+documentation:
+  sops:
+    - id: "SOP-001"
+      title: "Node Deployment"
+      path: ".specify/tasks/SOP-001-node-deployment.md"
+    
+    - id: "SOP-002"
+      title: "Swarm Join Process"
+      path: ".specify/tasks/SOP-002-swarm-join.md"
+    
+    - id: "SOP-003"
+      title: "Network Configuration"
+      path: ".specify/tasks/SOP-003-network-configuration.md"
+    
+    - id: "SOP-004"
+      title: "Telemetry Setup"
+      path: ".specify/tasks/SOP-004-telemetry-setup.md"
+    
+    - id: "SOP-005"
+      title: "Troubleshooting Guide"
+      path: ".specify/tasks/SOP-005-troubleshooting.md"
+  
+  guides:
+    - title: "Quick Start"
+      path: "README.md#quick-start"
+    
+    - title: "Architecture"
+      path: "README.md#architecture"
+    
+    - title: "Branching Strategy"
+      path: "BRANCHING.md"
+
+# Tags for discovery and categorization
+tags:
+  - "client-node"
+  - "docker-swarm"
+  - "edge-computing"
+  - "distributed-systems"
+  - "infrastructure"
+  - "automation"
+  - "multi-arch"
+  - "zerotier"
+  - "tailscale"
+  - "traefik"
+
+# Maintainers
+maintainers:
+  - name: "PR-CYBR Team"
+    contact: "team@pr-cybr.com"
+
+# License
+license: "MIT"
