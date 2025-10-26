@@ -3,8 +3,9 @@ set -euo pipefail
 
 # PR-CYBR-N0D3 Setup Script
 # Main entry point for node installation and configuration
-# Usage: sudo ./setup.sh
+# Usage: sudo ./setup.sh [OPTIONS]
 
+VERSION="1.0.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Colors for output
@@ -14,6 +15,48 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+# Show help message
+show_help() {
+    cat << EOF
+PR-CYBR-N0D3 Setup Script
+
+USAGE:
+    sudo ./setup.sh [OPTIONS]
+
+OPTIONS:
+    -h, --help          Show this help message
+    -v, --version       Show version information
+    --skip-checks       Skip system compatibility checks
+    --non-interactive   Use default configuration without prompts
+
+DESCRIPTION:
+    Automated setup script for PR-CYBR-N0D3 client nodes.
+    Installs and configures Docker, network overlays, and telemetry.
+
+EXAMPLES:
+    # Interactive setup (recommended)
+    sudo ./setup.sh
+
+    # Non-interactive setup with defaults
+    sudo ./setup.sh --non-interactive
+
+    # Show help
+    ./setup.sh --help
+
+For more information, see:
+    - README.md
+    - .specify/tasks/SOP-001-node-deployment.md
+
+EOF
+    exit 0
+}
+
+# Show version
+show_version() {
+    echo "PR-CYBR-N0D3 Setup Script v${VERSION}"
+    exit 0
+}
 
 # Banner
 print_banner() {
@@ -147,6 +190,10 @@ configure_environment() {
     # Check if .env already exists
     if [ -f "$SCRIPT_DIR/.env" ]; then
         log_info "Found existing .env file"
+        if [ "$NON_INTERACTIVE" = true ]; then
+            log_success "Using existing .env configuration (non-interactive mode)"
+            return 0
+        fi
         read -p "Use existing configuration? (Y/n): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
@@ -163,6 +210,14 @@ configure_environment() {
     
     cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
     log_info "Created .env from template"
+    
+    # Non-interactive mode: skip configuration prompts
+    if [ "$NON_INTERACTIVE" = true ]; then
+        log_warn "Non-interactive mode: Using default configuration values"
+        log_warn "You may need to reconfigure later for full functionality"
+        log_success "Environment configuration complete"
+        return 0
+    fi
     
     echo ""
     log_info "Configuration options:"
@@ -380,14 +435,42 @@ show_summary() {
 
 # Main execution flow
 main() {
+    # Parse command-line arguments
+    SKIP_CHECKS=false
+    NON_INTERACTIVE=false  # Reserved for future non-interactive mode implementation
+    
+    for arg in "$@"; do
+        case $arg in
+            -h|--help)
+                show_help
+                ;;
+            -v|--version)
+                show_version
+                ;;
+            --skip-checks)
+                SKIP_CHECKS=true
+                shift
+                ;;
+            --non-interactive)
+                NON_INTERACTIVE=true
+                shift
+                ;;
+            *)
+                # Unknown option
+                ;;
+        esac
+    done
+    
     # Check root
     check_root
     
     # Show welcome
     show_welcome
     
-    # Check system
-    check_system
+    # Check system (unless skipped)
+    if [ "$SKIP_CHECKS" = false ]; then
+        check_system
+    fi
     
     # Configure environment
     configure_environment
@@ -407,5 +490,16 @@ main() {
 # Error handler
 trap 'log_error "Setup failed at line $LINENO. Check the output above for details."; exit 1' ERR
 
-# Run main
+# Run main (but first check for help/version without root)
+for arg in "$@"; do
+    case $arg in
+        -h|--help)
+            show_help
+            ;;
+        -v|--version)
+            show_version
+            ;;
+    esac
+done
+
 main "$@"
