@@ -1,0 +1,167 @@
+name: Terraform Cloud Sync
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'configs/**'
+      - 'scripts/**'
+      - 'codex.yaml'
+      - '.env.example'
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: 'Terraform Cloud workspace'
+        required: false
+        default: 'pr-cybr-n0d3'
+
+jobs:
+  tfc-sync:
+    name: Sync to Terraform Cloud
+    runs-on: ubuntu-latest
+    if: github.repository == 'PR-CYBR/PR-CYBR-N0D3'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TFC_TOKEN }}
+
+      - name: Extract configuration
+        id: config
+        run: |
+          # Extract version from codex.yaml
+          VERSION=$(grep -m1 "version:" codex.yaml | awk '{print $2}' | tr -d '"')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Get commit SHA
+          echo "commit_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          
+          # Get branch name
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+      - name: Create Terraform variables payload
+        run: |
+          cat > tfc_vars.json <<EOF
+          {
+            "data": {
+              "type": "vars",
+              "attributes": {
+                "key": "node_version",
+                "value": "${{ steps.config.outputs.version }}",
+                "category": "terraform",
+                "hcl": false,
+                "sensitive": false
+              }
+            }
+          }
+          EOF
+          
+          cat > tfc_commit.json <<EOF
+          {
+            "data": {
+              "type": "vars",
+              "attributes": {
+                "key": "node_commit_sha",
+                "value": "${{ steps.config.outputs.commit_sha }}",
+                "category": "terraform",
+                "hcl": false,
+                "sensitive": false
+              }
+            }
+          }
+          EOF
+
+      - name: Update Terraform Cloud Variables
+        env:
+          TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
+          TFC_ORGANIZATION: PR-CYBR
+          TFC_WORKSPACE: ${{ github.event.inputs.workspace || 'pr-cybr-n0d3' }}
+        run: |
+          # Get workspace ID
+          WORKSPACE_ID=$(curl -s \
+            --header "Authorization: Bearer $TFC_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            "https://app.terraform.io/api/v2/organizations/$TFC_ORGANIZATION/workspaces/$TFC_WORKSPACE" | \
+            jq -r '.data.id')
+          
+          echo "Workspace ID: $WORKSPACE_ID"
+          
+          if [ "$WORKSPACE_ID" != "null" ] && [ -n "$WORKSPACE_ID" ]; then
+            # Update or create variables
+            for var_file in tfc_vars.json tfc_commit.json; do
+              curl -s \
+                --header "Authorization: Bearer $TFC_TOKEN" \
+                --header "Content-Type: application/vnd.api+json" \
+                --request POST \
+                --data @$var_file \
+                "https://app.terraform.io/api/v2/workspaces/$WORKSPACE_ID/vars" || \
+              echo "Variable may already exist or update failed"
+            done
+            
+            echo "Variables updated successfully"
+          else
+            echo "Workspace not found or TFC_TOKEN not configured"
+            echo "Skipping variable update"
+          fi
+
+      - name: Trigger Terraform Run (Optional)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
+          TFC_ORGANIZATION: PR-CYBR
+          TFC_WORKSPACE: ${{ github.event.inputs.workspace || 'pr-cybr-n0d3' }}
+        run: |
+          # Get workspace ID
+          WORKSPACE_ID=$(curl -s \
+            --header "Authorization: Bearer $TFC_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            "https://app.terraform.io/api/v2/organizations/$TFC_ORGANIZATION/workspaces/$TFC_WORKSPACE" | \
+            jq -r '.data.id')
+          
+          if [ "$WORKSPACE_ID" != "null" ] && [ -n "$WORKSPACE_ID" ]; then
+            # Create a run
+            cat > tfc_run.json <<EOF
+          {
+            "data": {
+              "attributes": {
+                "message": "Triggered by PR-CYBR-N0D3 commit ${{ github.sha }}",
+                "auto-apply": false
+              },
+              "type": "runs",
+              "relationships": {
+                "workspace": {
+                  "data": {
+                    "type": "workspaces",
+                    "id": "$WORKSPACE_ID"
+                  }
+                }
+              }
+            }
+          }
+          EOF
+            
+            RUN_ID=$(curl -s \
+              --header "Authorization: Bearer $TFC_TOKEN" \
+              --header "Content-Type: application/vnd.api+json" \
+              --request POST \
+              --data @tfc_run.json \
+              "https://app.terraform.io/api/v2/runs" | \
+              jq -r '.data.id')
+            
+            echo "Triggered Terraform run: $RUN_ID"
+            echo "View at: https://app.terraform.io/app/$TFC_ORGANIZATION/workspaces/$TFC_WORKSPACE/runs/$RUN_ID"
+          else
+            echo "Workspace not found. Skipping run trigger."
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Terraform Cloud Sync Complete! ☁️" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workspace:** ${{ github.event.inputs.workspace || 'pr-cybr-n0d3' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.config.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ steps.config.outputs.commit_sha }}" >> $GITHUB_STEP_SUMMARY
