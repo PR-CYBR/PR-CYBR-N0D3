@@ -48,6 +48,8 @@ Dynamic client node for PR-CYBR distributed architecture. Automates swarm join, 
 
 ### Installation
 
+**Simple 2-Step Process:**
+
 1. **Clone the repository**
 
 ```bash
@@ -55,28 +57,34 @@ git clone https://github.com/PR-CYBR/PR-CYBR-N0D3.git
 cd PR-CYBR-N0D3
 ```
 
-2. **Configure environment**
+2. **Run the setup script**
 
 ```bash
-cp .env.example .env
-# Edit .env with your credentials
-nano .env
+sudo ./setup.sh
 ```
 
-3. **Run installation script**
-
-```bash
-chmod +x scripts/install.sh
-sudo ./scripts/install.sh
-```
-
-The installation script will:
+The setup script will:
+- Check system compatibility
+- Guide you through configuration (interactive or manual)
 - Detect your system architecture
 - Install Docker and dependencies
-- Set up network overlays
+- Set up network overlays (ZeroTier, Tailscale)
 - Join the Docker Swarm
 - Start telemetry service
 - Register with management node
+
+**Advanced Installation Options:**
+
+For manual configuration or scripted deployments:
+
+```bash
+# Copy and edit environment file
+cp .env.example .env
+nano .env
+
+# Run individual installation script
+sudo ./scripts/install.sh
+```
 
 ### Verification
 
