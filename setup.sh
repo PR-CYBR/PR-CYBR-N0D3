@@ -180,7 +180,7 @@ configure_environment() {
         2)
             log_info "Please edit $SCRIPT_DIR/.env manually"
             log_info "Press Enter when ready to continue..."
-            read
+            read -r
             ;;
         3)
             log_warn "Using default configuration values"
@@ -202,7 +202,7 @@ configure_interactive() {
     
     # Node name
     DEFAULT_NODE_NAME="node-$(hostname)"
-    read -p "Node name [$DEFAULT_NODE_NAME]: " NODE_NAME
+    read -r -p "Node name [$DEFAULT_NODE_NAME]: " NODE_NAME
     NODE_NAME=${NODE_NAME:-$DEFAULT_NODE_NAME}
     sed -i "s/NODE_NAME=.*/NODE_NAME=$NODE_NAME/" "$SCRIPT_DIR/.env"
     
@@ -212,8 +212,8 @@ configure_interactive() {
     read -p "Do you have Docker Swarm credentials? (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "Swarm join token: " SWARM_TOKEN
-        read -p "Swarm manager IP: " SWARM_IP
+        read -r -p "Swarm join token: " SWARM_TOKEN
+        read -r -p "Swarm manager IP: " SWARM_IP
         sed -i "s|SWARM_JOIN_TOKEN=.*|SWARM_JOIN_TOKEN=$SWARM_TOKEN|" "$SCRIPT_DIR/.env"
         sed -i "s|SWARM_MANAGER_IP=.*|SWARM_MANAGER_IP=$SWARM_IP|" "$SCRIPT_DIR/.env"
         log_success "Swarm configuration saved"
@@ -227,8 +227,8 @@ configure_interactive() {
     read -p "Do you have ZeroTier credentials? (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "ZeroTier Network ID: " ZT_NETWORK_ID
-        read -p "ZeroTier API Token (optional): " ZT_API_TOKEN
+        read -r -p "ZeroTier Network ID: " ZT_NETWORK_ID
+        read -r -p "ZeroTier API Token (optional): " ZT_API_TOKEN
         sed -i "s|ZEROTIER_NETWORK_ID=.*|ZEROTIER_NETWORK_ID=$ZT_NETWORK_ID|" "$SCRIPT_DIR/.env"
         if [ -n "$ZT_API_TOKEN" ]; then
             sed -i "s|ZEROTIER_API_TOKEN=.*|ZEROTIER_API_TOKEN=$ZT_API_TOKEN|" "$SCRIPT_DIR/.env"
@@ -244,7 +244,7 @@ configure_interactive() {
     read -p "Do you have a Tailscale auth key? (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "Tailscale Auth Key: " TS_AUTH_KEY
+        read -r -p "Tailscale Auth Key: " TS_AUTH_KEY
         sed -i "s|TAILSCALE_AUTH_KEY=.*|TAILSCALE_AUTH_KEY=$TS_AUTH_KEY|" "$SCRIPT_DIR/.env"
         log_success "Tailscale configuration saved"
     else
@@ -257,8 +257,8 @@ configure_interactive() {
     read -p "Do you have management node credentials? (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "Management Node URL: " MGMT_URL
-        read -p "API Token: " API_TOKEN
+        read -r -p "Management Node URL: " MGMT_URL
+        read -r -p "API Token: " API_TOKEN
         sed -i "s|MGMT_NODE_URL=.*|MGMT_NODE_URL=$MGMT_URL|" "$SCRIPT_DIR/.env"
         sed -i "s|API_TOKEN=.*|API_TOKEN=$API_TOKEN|" "$SCRIPT_DIR/.env"
         log_success "Management node configuration saved"
