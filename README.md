@@ -123,6 +123,7 @@ PR-CYBR-N0D3/
 │   ├── telemetry.sh       # Telemetry collection
 │   ├── build-arm.sh       # ARM builds
 │   └── build-amd.sh       # AMD builds
+├── setup.sh               # Main setup script (start here!)
 ├── codex.yaml             # Codex registry entry
 ├── BRANCHING.md           # Branching strategy
 ├── LICENSE                # MIT License
