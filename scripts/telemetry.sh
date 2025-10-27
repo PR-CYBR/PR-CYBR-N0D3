@@ -68,8 +68,8 @@ collect_network_metrics() {
         return
     fi
     
-    RX_BYTES=$(cat /sys/class/net/$PRIMARY_IF/statistics/rx_bytes)
-    TX_BYTES=$(cat /sys/class/net/$PRIMARY_IF/statistics/tx_bytes)
+    RX_BYTES=$(cat "/sys/class/net/$PRIMARY_IF/statistics/rx_bytes")
+    TX_BYTES=$(cat "/sys/class/net/$PRIMARY_IF/statistics/tx_bytes")
     
     echo "{\"network_rx_bytes\": $RX_BYTES, \"network_tx_bytes\": $TX_BYTES, \"interface\": \"$PRIMARY_IF\"}"
 }
