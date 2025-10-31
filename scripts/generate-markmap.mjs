@@ -37,7 +37,7 @@ const LANGUAGE_EXT_MAP = {
   ".cs": "C#", ".rb": "Ruby", ".php": "PHP",
   ".sh": "Shell", ".ps1": "PowerShell",
   ".scala": "Scala", ".swift": "Swift",
-  ".m": "Objective‑C", ".mm": "Objective‑C++",
+  ".m": "Objective-C", ".mm": "Objective-C++",
   ".r": "R", ".lua": "Lua"
 };
 
@@ -60,7 +60,7 @@ function langOf(file) {
 }
 
 async function walk(dir, depth = 0) {
-  if (depth > MAX_DEPTH) return "";
+  if (depth > MAX_DEPTH || totalEntries > MAX_ENTRIES) return "";
   let entries;
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
@@ -74,7 +74,6 @@ async function walk(dir, depth = 0) {
     if (e.name === ".DS_Store" || IGNORES.has(e.name)) continue;
 
     const full = path.join(dir, e.name);
-    const rel = path.relative(root, full);
 
     if (e.isDirectory()) {
       md += `${"  ".repeat(depth)}- **${e.name}/**\n`;
