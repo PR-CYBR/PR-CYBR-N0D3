@@ -14,6 +14,12 @@ Dynamic client node for PR-CYBR distributed architecture. Automates swarm join, 
 - **Infrastructure as Code**: Terraform Cloud integration
 - **Spec-Driven Development**: Complete specification and planning framework
 
+## Live Codebase Mindmap
+
+Auto-generated on each push: **repo-map.html** (via GitHub Pages and CI artifact).
+
+When Pages is enabled, it will be served at: `https://<owner>.github.io/<repo>/repo-map.html`
+
 ## Architecture
 
 ```
