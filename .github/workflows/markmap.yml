@@ -35,6 +35,9 @@ jobs:
       - name: Generate Markdown map
         run: node ./scripts/generate-markmap.mjs
 
+      - name: Copy index.html template to markmap directory
+        run: cp .github/templates/index.html ./markmap/index.html
+
       - name: Build Markmap HTML
         run: npx markmap-cli ./markmap/repo-map.md -o ./markmap/repo-map.html
 
