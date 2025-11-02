@@ -1,41 +1,51 @@
 name: Auto PR from main to stage
 on:
-  workflow_run:
-    workflows: ["Spec-Kit Validation"]
-    branches:
-      - main
-    types:
-      - completed
+  push:
+    branches: [main]
+  workflow_dispatch:
 permissions:
+  contents: write
   pull-requests: write
-  contents: read
 jobs:
   create-pull-request:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Create Pull Request
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect if branches differ
+        id: diff
+        run: |
+          git fetch origin stage:refs/remotes/origin/stage || echo "stage branch may not exist"
+          AHEAD=$(git rev-list --left-right --count origin/stage...origin/main 2>/dev/null | cut -f2 || echo "0")
+          echo "ahead=$AHEAD" >> $GITHUB_OUTPUT
+
+      - name: Create or reuse PR main → stage
+        if: steps.diff.outputs.ahead != '0'
         uses: actions/github-script@v7
         with:
           script: |
-            const head = 'main';
-            const base = 'stage';
-            const { data: pulls } = await github.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${head}`,
-              base: base,
-              state: 'open'
-            });
-            if (pulls.length === 0) {
-              await github.pulls.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                head: head,
-                base: base,
-                title: 'Sync stage with main',
-                body: 'Automated PR to sync stage branch with main.'
-              });
+            const {owner, repo} = context.repo
+            const head = 'main'
+            const base = 'stage'
+
+            // Use Octokit v20+ style
+            const {data: prs} = await github.rest.pulls.list({
+              owner, repo, state: 'open', head: `${owner}:${head}`, base
+            })
+
+            if (prs.length > 0) {
+              core.info(`Open PR already exists: #${prs[0].number}`)
             } else {
-              console.log('Pull request already exists');
+              const {data: pr} = await github.rest.pulls.create({
+                owner, repo, head, base,
+                title: 'chore: sync main → stage',
+                body: 'Automated PR from main to stage'
+              })
+              core.info(`Created PR #${pr.number}`)
             }
+
+      - name: No changes to sync
+        if: steps.diff.outputs.ahead == '0'
+        run: echo "Branches are already in sync. Nothing to do."
