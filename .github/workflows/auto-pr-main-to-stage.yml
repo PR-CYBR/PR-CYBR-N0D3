@@ -17,8 +17,12 @@ jobs:
       - name: Detect if branches differ
         id: diff
         run: |
-          git fetch origin stage:refs/remotes/origin/stage || echo "stage branch may not exist"
-          AHEAD=$(git rev-list --left-right --count origin/stage...origin/main 2>/dev/null | cut -f2 || echo "0")
+          if git fetch origin stage:refs/remotes/origin/stage 2>/dev/null; then
+            AHEAD=$(git rev-list --left-right --count origin/stage...origin/main 2>/dev/null | cut -f2 || echo "0")
+          else
+            echo "Stage branch does not exist yet. Will create PR to initialize it."
+            AHEAD=1
+          fi
           echo "ahead=$AHEAD" >> $GITHUB_OUTPUT
 
       - name: Create or reuse PR main → stage
