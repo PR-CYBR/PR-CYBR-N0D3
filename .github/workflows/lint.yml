@@ -63,7 +63,7 @@ jobs:
   dockerfile-lint:
     name: Dockerfile Lint
     runs-on: ubuntu-latest
-    if: hashFiles('Dockerfile') != ''
+    if: ${{ hashFiles('Dockerfile') != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
